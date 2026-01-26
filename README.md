@@ -4,6 +4,7 @@
   <img src="assets/cryptex-logo.png" alt="Cryptex Logo" width="400">
 </p>
 
+[![PyPI version](https://img.shields.io/pypi/v/cryptex-cli.svg)](https://pypi.org/project/cryptex-cli/)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security](https://img.shields.io/badge/security-cryptographically%20secure-green.svg)](https://docs.python.org/3/library/secrets.html)
