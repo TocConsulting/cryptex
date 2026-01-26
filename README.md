@@ -40,7 +40,7 @@ A **production-ready CLI tool** for generating cryptographically secure password
 
 ### Simple Installation (Recommended)
 ```bash
-pip install cryptex
+pip install cryptex-cli
 ```
 
 ### From Source
@@ -474,7 +474,7 @@ cryptex -l 12 --save-keychain --keychain-service "test" --keychain-account "test
 - AWS CLI - for easier AWS credential management
 - HashiCorp Vault - for enterprise secret management
 
-All Python dependencies are installed automatically with `pip install cryptex`.
+All Python dependencies are installed automatically with `pip install cryptex-cli`.
 
 ## Contributing
 
