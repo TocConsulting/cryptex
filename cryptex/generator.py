@@ -243,7 +243,7 @@ class PasswordGenerator:
             'length': len(password),
             'strength': strength,
             'score': score,
-            'max_score': 80,
+            'max_score': 90,
             'entropy_bits': round(entropy, 2),
             'character_types': {
                 'lowercase': bool(re.search(r'[a-z]', password)),
