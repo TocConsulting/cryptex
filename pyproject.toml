@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cryptex-cli"
-version = "1.0.0"
+version = "1.0.1"
 description = "Enhanced random password generator with advanced security features"
 authors = [
     {name = "Tarek CHEIKH", email = "tarek@tocconsulting.fr"},

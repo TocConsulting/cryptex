@@ -514,9 +514,8 @@ def main(
             if not quiet:
                 print_success(f"Password(s) saved to {output_file}")
         else:
-            # Only show passwords if not quiet
-            if not quiet:
-                click.echo(output)
+            # Always output passwords (quiet mode only suppresses banner/messages)
+            click.echo(output)
         
         # Show analysis if verbose
         if verbose and not quiet:
