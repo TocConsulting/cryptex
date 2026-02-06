@@ -1,7 +1,7 @@
 # Cryptex - Enterprise Password Generator
 
 <p align="center">
-  <img src="assets/cryptex-logo.png" alt="Cryptex Logo" width="400">
+  <img src="assets/cryptex-logo.png" alt="Cryptex Logo" style="max-width: 100%; height: auto;">
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/cryptex-cli.svg)](https://pypi.org/project/cryptex-cli/)
