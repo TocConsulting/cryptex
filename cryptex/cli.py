@@ -2,6 +2,8 @@
 Command-line interface for Cryptex password generator.
 """
 
+import json
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -13,10 +15,13 @@ from .integrations import AWSSecretsManager, OSKeychain, HashiCorpVault
 from .templates import apply_template, list_templates as get_templates, get_template_details
 from .utils import (
     check_dependencies,
+    compute_totp_code,
     copy_to_clipboard,
+    decode_qr_image,
     format_analysis_output,
     generate_qr_code,
     generate_totp_qr_code,
+    parse_otpauth_uri,
     print_colored,
     print_error,
     print_success,
@@ -134,6 +139,11 @@ from .utils import (
     help='Account name shown in 2FA app (e.g., user@example.com)'
 )
 @click.option(
+    '--totp-code',
+    default=None,
+    help='Read TOTP code from a base32 secret or QR code image path'
+)
+@click.option(
     '-q', '--quiet',
     is_flag=True,
     help='Suppress all output except passwords'
@@ -224,7 +234,7 @@ from .utils import (
     type=click.Path(),
     required=False
 )
-@click.version_option(version='1.0.0', prog_name='cryptex')
+@click.version_option(version='1.1.0', prog_name='cryptex')
 def main(
     length: int,
     count: int,
@@ -243,6 +253,7 @@ def main(
     totp: bool,
     totp_issuer: str,
     totp_account: Optional[str],
+    totp_code: Optional[str],
     quiet: bool,
     verbose: bool,
     custom_charset: str,
@@ -301,6 +312,19 @@ def main(
 
       Generates a TOTP secret + QR code you can scan with Google Authenticator.
       The issuer and account appear in your 2FA app to identify the entry.
+
+    \b
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    TOTP CODE READER (get current 6-digit code)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    \b
+      cryptex --totp-code "JBSWY3DPEHPK3PXP"
+      cryptex --totp-code ./qr-code.png
+      cryptex --totp-code "JBSWY3DPEHPK3PXP" --copy
+      cryptex --totp-code "JBSWY3DPEHPK3PXP" -q
+
+      Provide a base32 secret or a QR code image to get the current TOTP code.
 
     \b
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -377,7 +401,7 @@ def main(
         sys.exit(0)
     
     # Check dependencies early
-    dep_error = check_dependencies(copy, qr)
+    dep_error = check_dependencies(copy)
     if dep_error:
         print_error(dep_error)
         sys.exit(1)
@@ -416,7 +440,7 @@ def main(
         sys.exit(1)
     
     # Validate keychain options
-    if save_keychain and not kv and not keychain_account:
+    if save_keychain and not kv and not keychain_account and not totp_code and not totp:
         print_error("--keychain-account is required when using --save-keychain for single passwords")
         sys.exit(1)
     
@@ -465,7 +489,6 @@ def main(
 
             if output_file:
                 output_path = Path(output_file)
-                import json
                 output_path.write_text(json.dumps({
                     'issuer': totp_issuer,
                     'account': totp_account,
@@ -477,6 +500,86 @@ def main(
         else:
             print_error("Failed to generate TOTP. The qrcode library may not be installed properly.")
             sys.exit(1)
+
+        sys.exit(0)
+
+    # TOTP code reader mode - compute TOTP code from secret or QR image
+    if totp_code:
+        secret = None
+        issuer = None
+        account = None
+
+        # Smart detection: file path vs. base32 secret
+        if os.path.isfile(totp_code):
+            decoded = decode_qr_image(totp_code)
+            if decoded is None:
+                print_error(f"Could not decode QR code from image: {totp_code}")
+                sys.exit(1)
+
+            try:
+                totp_params = parse_otpauth_uri(decoded)
+                secret = totp_params['secret']
+                issuer = totp_params.get('issuer', '')
+                account = totp_params.get('account', '')
+            except ValueError as e:
+                print_error(str(e))
+                sys.exit(1)
+        else:
+            secret = totp_code
+
+        # Compute current and next TOTP codes
+        try:
+            current = compute_totp_code(secret, offset=0)
+            next_code = compute_totp_code(secret, offset=1)
+        except ValueError as e:
+            print_error(str(e))
+            sys.exit(1)
+
+        if quiet:
+            click.echo(current['code'])
+        else:
+            print_colored("Cryptex - TOTP Code Reader", color='green', bold=True)
+            click.echo()
+
+            if issuer or account:
+                if issuer:
+                    print_colored(f"Issuer:  {issuer}", color='cyan')
+                if account:
+                    print_colored(f"Account: {account}", color='cyan')
+                click.echo()
+
+            print_colored(f"TOTP Code: {current['code']}", color='cyan', bold=True)
+
+            remaining = current['remaining']
+            if remaining >= 10:
+                time_color = 'green'
+            elif remaining >= 5:
+                time_color = 'yellow'
+            else:
+                time_color = 'red'
+            print_colored(f"Valid for: {remaining} seconds", color=time_color)
+
+            print_colored(f"Next code: {next_code['code']}", color='blue')
+
+        # Handle clipboard copy
+        if copy:
+            if copy_to_clipboard(current['code']):
+                if not quiet:
+                    print_success("TOTP code copied to clipboard!")
+            else:
+                print_error("Failed to copy to clipboard. Ensure pbcopy (macOS) or xclip (Linux) is installed.")
+                sys.exit(1)
+
+        # Handle keychain save (save the secret, not the ephemeral code)
+        if save_keychain:
+            keychain_acct = account or keychain_account or 'totp-secret'
+            try:
+                keychain = OSKeychain()
+                success = keychain.save_secret(keychain_service, keychain_acct, secret)
+                if success and not quiet:
+                    print_success(f"TOTP secret saved to keychain: {keychain_service}/{keychain_acct}")
+            except Exception as e:
+                print_error(f"Failed to save to keychain: {e}")
 
         sys.exit(0)
 
@@ -555,7 +658,6 @@ def main(
                 if key_names and len(passwords) > 1:
                     # Save as key-value pairs in a single secret
                     secrets_dict = {name: pwd for name, pwd in zip(key_names, passwords)}
-                    import json
                     success = aws_manager.save_secret(aws_secret_name, json.dumps(secrets_dict))
                     if success:
                         if not quiet:
@@ -612,7 +714,6 @@ def main(
         if save_vault:
             try:
                 # Get Vault token from environment
-                import os
                 vault_token = os.getenv('VAULT_TOKEN')
                 
                 if not vault_token:

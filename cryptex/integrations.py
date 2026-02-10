@@ -6,38 +6,17 @@ import json
 import sys
 from typing import Dict, List, Optional
 
+import boto3
 import click
-
-# AWS Secrets Manager
-try:
-    import boto3
-    from botocore.exceptions import ClientError, NoCredentialsError
-    HAS_BOTO3 = True
-except ImportError:
-    HAS_BOTO3 = False
-
-# HashiCorp Vault
-try:
-    import hvac
-    HAS_HVAC = True
-except ImportError:
-    HAS_HVAC = False
-
-# OS Keyring
-try:
-    import keyring
-    HAS_KEYRING = True
-except ImportError:
-    HAS_KEYRING = False
+import hvac
+import keyring
+from botocore.exceptions import ClientError, NoCredentialsError
 
 
 class AWSSecretsManager:
     """AWS Secrets Manager integration."""
     
     def __init__(self, region_name: str = 'us-east-1', profile_name: Optional[str] = None):
-        if not HAS_BOTO3:
-            raise ImportError("boto3 is not available. This should not happen with a proper Cryptex installation.")
-        
         try:
             # Create session with optional profile
             if profile_name:
@@ -93,9 +72,6 @@ class HashiCorpVault:
     """HashiCorp Vault integration."""
     
     def __init__(self, url: str = 'http://localhost:8200', token: Optional[str] = None):
-        if not HAS_HVAC:
-            raise ImportError("hvac is not available. This should not happen with a proper Cryptex installation.")
-        
         self.client = hvac.Client(url=url, token=token)
         
         if not self.client.is_authenticated():
@@ -130,8 +106,7 @@ class OSKeychain:
     """OS-native keychain integration."""
     
     def __init__(self):
-        if not HAS_KEYRING:
-            raise ImportError("keyring is not available. This should not happen with a proper Cryptex installation.")
+        pass
     
     def save_secret(self, service: str, username: str, password: str) -> bool:
         """Save a secret to OS keychain."""
@@ -152,7 +127,7 @@ class OSKeychain:
 def check_integration_dependencies() -> Dict[str, bool]:
     """Check which integrations are available."""
     return {
-        'aws': HAS_BOTO3,
-        'vault': HAS_HVAC,
-        'keyring': HAS_KEYRING
+        'aws': True,
+        'vault': True,
+        'keyring': True,
     }

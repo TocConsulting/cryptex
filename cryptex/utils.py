@@ -3,20 +3,22 @@ Utility functions for clipboard, QR code generation, and system integration.
 """
 
 import base64
+import hashlib
+import hmac
 import io
 import secrets
 import shutil
+import struct
 import subprocess
 import sys
-from typing import Dict, Optional
-from urllib.parse import quote
+import time as time_module
+from typing import Any, Dict, Optional
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import click
-try:
-    import qrcode
-    HAS_QRCODE = True
-except ImportError:
-    HAS_QRCODE = False
+import qrcode
+from PIL import Image
+from pyzbar.pyzbar import decode as pyzbar_decode
 
 
 class Colors:
@@ -48,9 +50,6 @@ def copy_to_clipboard(password: str) -> bool:
 
 def generate_qr_code(password: str) -> bool:
     """Generate QR code for password using native Python library."""
-    if not HAS_QRCODE:
-        return False
-
     try:
         qr = qrcode.QRCode(border=1)
         qr.add_data(password)
@@ -72,9 +71,6 @@ def generate_totp_qr_code(issuer: str, account: str, quiet: bool = False) -> Opt
 
     Returns dict with 'secret' and 'uri' on success, None on failure.
     """
-    if not HAS_QRCODE:
-        return None
-
     try:
         # Generate 20 bytes (160 bits) of random data for TOTP secret
         secret_bytes = secrets.token_bytes(20)
@@ -102,16 +98,107 @@ def generate_totp_qr_code(issuer: str, account: str, quiet: bool = False) -> Opt
         return None
 
 
-def check_dependencies(copy_enabled: bool, qr_enabled: bool) -> Optional[str]:
+def compute_totp_code(secret: str, time_step: int = 30, digits: int = 6,
+                      algorithm: str = 'sha1', offset: int = 0) -> Dict[str, Any]:
+    """
+    Compute a TOTP code from a base32 secret per RFC 6238.
+
+    Args:
+        secret: Base32-encoded TOTP secret (with or without padding).
+        time_step: Time step in seconds (default 30).
+        digits: Number of digits in the code (default 6).
+        algorithm: Hash algorithm (default 'sha1').
+        offset: Number of time steps to offset (0 = current, 1 = next).
+
+    Returns:
+        Dict with 'code' (str), 'remaining' (int seconds), 'period' (int).
+    """
+    # Normalize the secret: uppercase, strip spaces/dashes, re-pad to multiple of 8
+    clean_secret = secret.upper().replace(' ', '').replace('-', '')
+    padding = (8 - len(clean_secret) % 8) % 8
+    clean_secret += '=' * padding
+
+    try:
+        key = base64.b32decode(clean_secret)
+    except Exception:
+        raise ValueError(f"Invalid base32 TOTP secret: '{secret}'")
+
+    # Current time counter
+    now = int(time_module.time())
+    counter = (now // time_step) + offset
+    remaining = time_step - (now % time_step)
+
+    # HMAC computation (RFC 4226 / RFC 6238)
+    hash_name = algorithm.lower()
+    counter_bytes = struct.pack('>Q', counter)
+    mac = hmac.new(key, counter_bytes, getattr(hashlib, hash_name)).digest()
+
+    # Dynamic truncation
+    offset_byte = mac[-1] & 0x0F
+    truncated = struct.unpack('>I', mac[offset_byte:offset_byte + 4])[0] & 0x7FFFFFFF
+    code = str(truncated % (10 ** digits)).zfill(digits)
+
+    return {
+        'code': code,
+        'remaining': remaining,
+        'period': time_step,
+    }
+
+
+def decode_qr_image(image_path: str) -> Optional[str]:
+    """Decode a QR code image and return its text content."""
+    try:
+        image = Image.open(image_path)
+        decoded_objects = pyzbar_decode(image)
+        if decoded_objects:
+            return decoded_objects[0].data.decode('utf-8')
+        return None
+    except Exception:
+        return None
+
+
+def parse_otpauth_uri(uri: str) -> Dict[str, Any]:
+    """
+    Parse an otpauth:// URI and extract TOTP parameters.
+
+    Returns dict with 'secret', 'issuer', 'account', 'algorithm', 'digits', 'period'.
+    """
+    parsed = urlparse(uri)
+    if parsed.scheme != 'otpauth' or parsed.netloc != 'totp':
+        raise ValueError(f"Not a valid otpauth TOTP URI: {uri}")
+
+    # Label is the path component (e.g., /Issuer:account)
+    label = unquote(parsed.path.lstrip('/'))
+    params = parse_qs(parsed.query)
+
+    secret = params.get('secret', [None])[0]
+    if not secret:
+        raise ValueError("No secret found in otpauth URI")
+
+    issuer = params.get('issuer', [''])[0]
+    account = label
+    if ':' in label:
+        issuer_from_label, account = label.split(':', 1)
+        if not issuer:
+            issuer = issuer_from_label
+
+    return {
+        'secret': secret,
+        'issuer': issuer,
+        'account': account,
+        'algorithm': params.get('algorithm', ['SHA1'])[0],
+        'digits': int(params.get('digits', ['6'])[0]),
+        'period': int(params.get('period', ['30'])[0]),
+    }
+
+
+def check_dependencies(copy_enabled: bool) -> Optional[str]:
     """Check if required dependencies are available."""
     missing = []
-    
+
     if copy_enabled:
         if not (shutil.which('pbcopy') or shutil.which('xclip')):
             missing.append("pbcopy (macOS) or xclip (Linux) for clipboard support")
-    
-    if qr_enabled and not HAS_QRCODE:
-        missing.append("qrcode Python library for QR code generation (install with: pip install qrcode)")
     
     if missing:
         return f"Missing dependencies: {', '.join(missing)}"

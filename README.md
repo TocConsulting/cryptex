@@ -19,7 +19,8 @@ A **production-ready CLI tool** for generating cryptographically secure password
 - **Cryptographically Secure**: Uses Python's `secrets` module for secure random generation
 - **Multiple Password Types**: Strong, pronounceable, alphabetic, numeric, API keys, and custom character sets
 - **Strength Analysis**: Real-time password strength scoring and entropy calculation
-- **QR Code Generation**: Native Python QR codes (no external dependencies)
+- **QR Code Generation**: Native Python QR codes for password sharing and TOTP setup
+- **TOTP Code Reader**: Compute 6-digit TOTP codes from a base32 secret or QR code image
 
 ### Enterprise Integrations
 - **AWS Secrets Manager**: Direct save with profile support
@@ -77,6 +78,10 @@ cryptex --kv "DB_PASSWORD,API_KEY,JWT_SECRET" -f env > .env
 cryptex --template nist-800-63b           # NIST compliant password
 cryptex --template database               # Database-safe password
 cryptex --list-templates                  # Show all templates
+
+# TOTP code reader (CLI authenticator)
+cryptex --totp-code "JBSWY3DPEHPK3PXP"           # From base32 secret
+cryptex --totp-code ./qr-code.png                 # From QR code image
 
 # Enterprise storage
 cryptex -l 20 --save-keychain --keychain-service "MyApp" --keychain-account "admin"
@@ -249,6 +254,30 @@ cryptex -c 3 -f env
 # PASSWORD_3="K5@tL%9vN#6mP!8r"
 ```
 
+### TOTP Code Reader
+
+Use Cryptex as a CLI authenticator to compute TOTP codes from existing secrets:
+
+```bash
+# From a base32 secret string
+cryptex --totp-code "JBSWY3DPEHPK3PXP"
+
+# From a QR code image
+cryptex --totp-code ./authenticator-qr.png
+
+# Quiet mode (just the 6-digit code, for scripts)
+cryptex --totp-code "JBSWY3DPEHPK3PXP" -q
+
+# Copy code to clipboard
+cryptex --totp-code "JBSWY3DPEHPK3PXP" --copy
+
+# Save the decoded secret to keychain for later
+cryptex --totp-code ./qr.png --save-keychain --keychain-service "MyApp"
+
+# Pipeline usage
+TOTP_CODE=$(cryptex --totp-code "$SECRET" -q)
+```
+
 ### Advanced Features
 
 ```bash
@@ -290,6 +319,7 @@ cryptex -s "!@#$" -x "0O1l"               # Custom special chars, exclude confus
 | `--separator` | Separator for multiple passwords | newline | `--separator ","` |
 | `--copy` | Copy to clipboard | False | `--copy` |
 | `--qr` | Generate QR code | False | `--qr` |
+| `--totp-code` | Read TOTP code from secret or QR image | None | `--totp-code "SECRET"` |
 | `-q, --quiet` | Silent mode (hide passwords) | False | `-q` |
 | `-v, --verbose` | Show password analysis | False | `-v` |
 | `--template` | Use compliance template | None | `--template nist-800-63b` |
@@ -470,6 +500,8 @@ cryptex -l 12 --save-keychain --keychain-service "test" --keychain-account "test
 - boto3 1.26+ (AWS integration)
 - hvac 1.0+ (Vault integration)
 - keyring 24.0+ (OS keychain)
+- pyzbar 0.1.9+ (QR code image decoding)
+- Pillow 9.0+ (Image processing)
 
 ### Optional System Tools
 - `pbcopy` (macOS) or `xclip` (Linux) - for clipboard functionality

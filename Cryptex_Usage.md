@@ -14,13 +14,14 @@ Complete guide to every Cryptex command with real-world use cases.
 6. [Compliance Templates](#compliance-templates)
 7. [API Key Generation](#api-key-generation)
 8. [TOTP / 2FA Generation](#totp--2fa-generation)
-9. [QR Code Generation](#qr-code-generation)
-10. [Key-Value Pairs](#key-value-pairs)
-11. [Output Formats](#output-formats)
-12. [Clipboard Integration](#clipboard-integration)
-13. [Password Analysis](#password-analysis)
-14. [Storage Integrations](#storage-integrations)
-15. [Quiet Mode](#quiet-mode)
+9. [TOTP Code Reader](#totp-code-reader)
+10. [QR Code Generation](#qr-code-generation)
+11. [Key-Value Pairs](#key-value-pairs)
+12. [Output Formats](#output-formats)
+13. [Clipboard Integration](#clipboard-integration)
+14. [Password Analysis](#password-analysis)
+15. [Storage Integrations](#storage-integrations)
+16. [Quiet Mode](#quiet-mode)
 
 ---
 
@@ -636,6 +637,91 @@ done
 
 ---
 
+## TOTP Code Reader
+
+### What is this?
+
+The TOTP Code Reader turns Cryptex into a **CLI authenticator**. Give it a base32 secret or a QR code image, and it computes the current 6-digit TOTP code — just like Google Authenticator, but in your terminal.
+
+### Command
+```bash
+cryptex --totp-code "<secret-or-image-path>"
+```
+
+### How it works
+
+Cryptex auto-detects the input:
+- If the argument is an **existing file path** → treats it as a QR code image and decodes it
+- Otherwise → treats it as a **base32 TOTP secret string**
+
+### Use cases
+
+| Scenario | Command |
+|----------|---------|
+| Quick 2FA code from secret | `cryptex --totp-code "JBSWY3DPEHPK3PXP"` |
+| Decode QR code image | `cryptex --totp-code ./qr-code.png` |
+| Script automation | `cryptex --totp-code "$SECRET" -q` |
+| Copy code to clipboard | `cryptex --totp-code "SECRET" --copy` |
+| Save secret to keychain | `cryptex --totp-code ./qr.png --save-keychain --keychain-service "MyApp"` |
+
+### Examples
+
+#### From a base32 secret
+```bash
+cryptex --totp-code "JBSWY3DPEHPK3PXP"
+```
+Output:
+```
+Cryptex - TOTP Code Reader
+
+TOTP Code: 847293
+Valid for: 17 seconds
+Next code: 193847
+```
+
+#### From a QR code image
+```bash
+cryptex --totp-code ./authenticator-qr.png
+```
+Output:
+```
+Cryptex - TOTP Code Reader
+
+Issuer:  GitHub
+Account: user@email.com
+
+TOTP Code: 529174
+Valid for: 23 seconds
+Next code: 841036
+```
+
+#### Quiet mode (for scripts)
+```bash
+# Just the 6-digit code, nothing else
+CODE=$(cryptex --totp-code "JBSWY3DPEHPK3PXP" -q)
+echo "Your code is: $CODE"
+```
+
+#### Copy to clipboard
+```bash
+cryptex --totp-code "JBSWY3DPEHPK3PXP" --copy
+```
+
+#### Save decoded secret to keychain
+```bash
+# Decode QR and store the secret for future use
+cryptex --totp-code ./qr.png --save-keychain --keychain-service "GitHub"
+```
+
+### Output details
+
+- **TOTP Code**: The current 6-digit code
+- **Valid for**: Seconds remaining before the code changes (color-coded: green >= 10s, yellow 5-9s, red < 5s)
+- **Next code**: The code that will be active after the current one expires
+- **Issuer/Account**: Shown when decoded from a QR code containing an otpauth URI
+
+---
+
 ## QR Code Generation
 
 ### Command
@@ -1094,6 +1180,8 @@ cryptex --template database \
 | For admin | `cryptex --template high-security` |
 | API key | `cryptex -t api-key --api-format uuid` |
 | 2FA setup | `cryptex --totp --totp-issuer "App" --totp-account "user"` |
+| Read TOTP code | `cryptex --totp-code "SECRET"` |
+| Read TOTP from QR | `cryptex --totp-code ./qr.png` |
 | Multiple secrets | `cryptex --kv "A,B,C" -f env` |
 | Copy to clipboard | `cryptex --copy` |
 | Save to AWS | `cryptex --save-aws --aws-secret-name "name"` |
