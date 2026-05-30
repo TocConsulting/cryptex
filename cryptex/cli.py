@@ -236,7 +236,7 @@ from .utils import (
     help='Save generated password(s)/TOTP details to a file '
          'instead of printing to the terminal.'
 )
-@click.version_option(version='1.2.0', prog_name='cryptex')
+@click.version_option(version='1.2.1', prog_name='cryptex')
 def main(
     length: int,
     count: int,

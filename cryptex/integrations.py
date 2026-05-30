@@ -6,17 +6,18 @@ import json
 import sys
 from typing import Dict, List, Optional
 
-import boto3
-import click
-import hvac
-import keyring
-from botocore.exceptions import ClientError, NoCredentialsError
+# boto3, hvac and keyring are imported lazily inside the methods that use
+# them. They pull in heavy/native dependencies, and importing them at module
+# load time would crash the entire CLI (even plain password generation) if
+# any of them is broken or missing in the user's environment.
 
 
 class AWSSecretsManager:
     """AWS Secrets Manager integration."""
     
     def __init__(self, region_name: str = 'us-east-1', profile_name: Optional[str] = None):
+        import boto3
+        from botocore.exceptions import NoCredentialsError
         try:
             # Create session with optional profile
             if profile_name:
@@ -37,6 +38,7 @@ class AWSSecretsManager:
     
     def save_secret(self, secret_name: str, secret_value: str, description: str = "") -> bool:
         """Save a secret to AWS Secrets Manager."""
+        from botocore.exceptions import ClientError
         try:
             # Try to create new secret
             self.client.create_secret(
@@ -72,6 +74,7 @@ class HashiCorpVault:
     """HashiCorp Vault integration."""
     
     def __init__(self, url: str = 'http://localhost:8200', token: Optional[str] = None):
+        import hvac
         self.client = hvac.Client(url=url, token=token)
         
         if not self.client.is_authenticated():
@@ -110,6 +113,7 @@ class OSKeychain:
     
     def save_secret(self, service: str, username: str, password: str) -> bool:
         """Save a secret to OS keychain."""
+        import keyring
         try:
             keyring.set_password(service, username, password)
             return True
