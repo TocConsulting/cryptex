@@ -17,8 +17,8 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import click
 import qrcode
+import zxingcpp
 from PIL import Image
-from pyzbar.pyzbar import decode as pyzbar_decode
 
 
 class Colors:
@@ -149,9 +149,9 @@ def decode_qr_image(image_path: str) -> Optional[str]:
     """Decode a QR code image and return its text content."""
     try:
         image = Image.open(image_path)
-        decoded_objects = pyzbar_decode(image)
-        if decoded_objects:
-            return decoded_objects[0].data.decode('utf-8')
+        results = zxingcpp.read_barcodes(image)
+        if results:
+            return results[0].text
         return None
     except Exception:
         return None

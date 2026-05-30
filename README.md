@@ -6,12 +6,16 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/cryptex-cli.svg)](https://pypi.org/project/cryptex-cli/)
 [![Downloads](https://static.pepy.tech/badge/cryptex-cli)](https://pepy.tech/project/cryptex-cli)
-[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security](https://img.shields.io/badge/security-cryptographically%20secure-green.svg)](https://docs.python.org/3/library/secrets.html)
 [![CLI Framework](https://img.shields.io/badge/CLI-Click-brightgreen.svg)](https://click.palletsprojects.com/)
 
 A **production-ready CLI tool** for generating cryptographically secure passwords with enterprise integrations, compliance templates, and advanced customization options.
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Cryptex demo" width="100%">
+</p>
 
 ## Key Features
 
@@ -494,13 +498,13 @@ cryptex -l 12 --save-keychain --keychain-service "test" --keychain-account "test
 ## Dependencies
 
 ### Required
-- Python 3.8+
+- Python 3.10+
 - click 8.0+ (CLI framework)
 - qrcode 7.0+ (QR code generation)
 - boto3 1.26+ (AWS integration)
 - hvac 1.0+ (Vault integration)
 - keyring 24.0+ (OS keychain)
-- pyzbar 0.1.9+ (QR code image decoding)
+- zxing-cpp 2.0+ (QR code image decoding — self-contained, no system libs)
 - Pillow 9.0+ (Image processing)
 
 ### Optional System Tools

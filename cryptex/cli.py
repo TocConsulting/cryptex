@@ -229,12 +229,14 @@ from .utils import (
     help='Vault URL',
     show_default=True
 )
-@click.argument(
-    'output_file',
+@click.option(
+    '-o', '--output', 'output_file',
     type=click.Path(),
-    required=False
+    default=None,
+    help='Save generated password(s)/TOTP details to a file '
+         'instead of printing to the terminal.'
 )
-@click.version_option(version='1.1.0', prog_name='cryptex')
+@click.version_option(version='1.2.0', prog_name='cryptex')
 def main(
     length: int,
     count: int,
