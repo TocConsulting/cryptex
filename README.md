@@ -6,7 +6,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/cryptex-cli.svg)](https://pypi.org/project/cryptex-cli/)
 [![Downloads](https://static.pepy.tech/badge/cryptex-cli)](https://pepy.tech/project/cryptex-cli)
-[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security](https://img.shields.io/badge/security-cryptographically%20secure-green.svg)](https://docs.python.org/3/library/secrets.html)
 [![CLI Framework](https://img.shields.io/badge/CLI-Click-brightgreen.svg)](https://click.palletsprojects.com/)
@@ -498,7 +498,7 @@ cryptex -l 12 --save-keychain --keychain-service "test" --keychain-account "test
 ## Dependencies
 
 ### Required
-- Python 3.10+
+- Python 3.11+
 - click 8.0+ (CLI framework)
 - qrcode 7.0+ (QR code generation)
 - boto3 1.26+ (AWS integration)
